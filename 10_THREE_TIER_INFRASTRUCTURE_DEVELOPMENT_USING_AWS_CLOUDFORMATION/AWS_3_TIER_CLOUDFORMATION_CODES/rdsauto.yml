@@ -1,0 +1,69 @@
+
+Parameters:
+  VPC:
+    Description: Select VPC form the available VPCs in your account.
+    Type: AWS::EC2::VPC::Id
+  PrivateSubnet1:
+    Description: Select Private Subnet 1.
+    Type: AWS::EC2::Subnet::Id
+  PrivateSubnet2:
+    Description: Select Private Subnet 2.
+    Type: AWS::EC2::Subnet::Id
+Resources:
+  RDSInstance:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      DBName: mydatabase
+      DBInstanceClass: db.t2.micro
+      Engine: mysql
+      EngineVersion: '5.7'
+      MasterUsername: rdsroot
+      MasterUserPassword: mypassword
+      AllocatedStorage: 5
+      DBSubnetGroupName:
+        Ref: DBSubnetGroup
+      VPCSecurityGroups:
+      - Ref: RDSAccessSecurityGroup
+      MultiAZ: true
+      PreferredBackupWindow: '15:00-17:00'
+      PreferredMaintenanceWindow: 'Sun:18:00-Sun:22:00'
+      StorageEncrypted: false
+      Tags:
+      - Key: Name
+        Value: myrdsinstance
+      - Key: Owner
+        Value: myteam
+  RDSAccessSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: RDS instance access
+      VpcId:
+        Ref: VPC
+      Tags:
+      - Key: Name
+        Value: myrdssecuritygroup
+      - Key: Owner
+        Value: myteam
+  AccessSecurityGroupIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    DependsOn: RDSAccessSecurityGroup
+    Properties:
+      GroupId:
+        Ref: RDSAccessSecurityGroup
+      IpProtocol: tcp
+      FromPort: 3306
+      ToPort: 3306
+      SourceSecurityGroupId:
+        Ref: RDSAccessSecurityGroup
+  DBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: Subnets for RDS instance
+      SubnetIds:
+      - Ref: PrivateSubnet1
+      - Ref: PrivateSubnet2
+Outputs:
+  RDSEndpoint:
+    Description: RDS instance endpoint
+    Value:
+      Fn::GetAtt: [RDSInstance, Endpoint.Address]
